@@ -1,0 +1,8 @@
+# Build フォルダを無視
+build/
+
+# loaders/ifc 内の全ファイルを無視
+loaders/ifc/
+
+# 特定のファイルのみを無視
+fonts/droid/droid_serif_bold.typeface.json
