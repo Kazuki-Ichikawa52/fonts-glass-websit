@@ -1,9 +1,7 @@
 import * as THREE from "./build/three.module.js";
 import { OrbitControls } from "./controls/OrbitControls.js";
-import { FontLoader } from "./loaders/FontLoader.js";
-import { TextGeometry } from "./geometries/TextGeometry.js";
 
-// Scene
+// シーンの作成
 const scene = new THREE.Scene();
 
 const sizes = {
@@ -11,206 +9,139 @@ const sizes = {
   height: window.innerHeight,
 };
 
-// Camera
-const camera = new THREE.PerspectiveCamera(
-  75,
-  sizes.width / sizes.height,
-  0.1,
-  100
-);
+// カメラ
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
 camera.position.set(0, 0, 5);
+scene.add(camera);
 
 // 光源
 const pointLight = new THREE.PointLight(0xffffff, 3);
-pointLight.position.set(5, 0, 5);
+pointLight.position.set(5, 5, 5);
 scene.add(pointLight);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
-// Renderer
+// レンダラー
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
-// Controls
+// コントロール（マウス操作）
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// Global variables
-let text, leftText, rightText;
+// ** 壁の作成 **
+const wallGeometry = new THREE.PlaneGeometry(10, 6);
+const wallMaterial = new THREE.MeshStandardMaterial({
+  color: 0xaaaaaa,
+  roughness: 0.8,
+  metalness: 0.2,
+});
+const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+wall.rotation.y = Math.PI / 2;
+wall.position.set(-5, 0, 0); // 左側に配置
+scene.add(wall);
 
-// 白いラインの作成
-function addWhiteLine(yPosition) {
-  const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+// ** スライム（より細かい分割を持つ立方体） **
+const geometry = new THREE.BoxGeometry(2, 2, 2, 20, 20, 20); // 細分化を増やして細かい潰れ
+const positionAttribute = geometry.attributes.position;
+const originalPositions = positionAttribute.array.slice(); // 初期状態を保存
 
-  // 頂点の設定（水平線）
-  const points = [];
-  points.push(new THREE.Vector3(-5, yPosition, -2.5)); // 始点
-  points.push(new THREE.Vector3(5, yPosition, -2.5)); // 終点
-
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const line = new THREE.Line(geometry, material);
-  scene.add(line);
-}
-
-// ラインを追加（例: 水平ラインを中央に
-addWhiteLine(4.5); // 高さ -2 の線
-addWhiteLine(1.2); // 高さ -1 の線
-addWhiteLine(-0.9); // 高さ 0 の線
-addWhiteLine(-4.5); // 高さ 1 の線
-
-// Fonts
-const fontLoader = new FontLoader();
-fontLoader.load("./fonts/helvetiker_regular.typeface.json", (font) => {
-  // ガラスの「S」
-  const textGeometry = new TextGeometry("S", {
-    font: font,
-    size: 4.0,
-    height: 1.0,
-    curveSegments: 12,
-    bevelEnabled: true,
-    bevelThickness: 0.01,
-    bevelSize: 0.1,
-    bevelOffset: 0,
-    bevelSegments: 4,
-  });
-
-  const textMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    transmission: 0.95,
-    roughness: 0.0,
-    metalness: 0.0,
-    ior: 1.33,
-    thickness: 1.0,
-    clearcoat: 0.0,
-    clearcoatRoughness: 0.0,
-  });
-
-  text = new THREE.Mesh(textGeometry, textMaterial);
-  textGeometry.center();
-  scene.add(text);
-
-  // 背景文字2
-  const backgroundTextGeometry = new TextGeometry("ANIMATED\nTEST SURFACE", {
-    font: font,
-    size: 0.5,
-    height: 0.01,
-    curveSegments: 5,
-  });
-
-  const backgroundTextMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-  });
-
-  const backgroundText = new THREE.Mesh(
-    backgroundTextGeometry,
-    backgroundTextMaterial
-  );
-  backgroundTextGeometry.center();
-  backgroundText.position.set(-2, -2, -2.5); // 指定位置に配置
-  scene.add(backgroundText);
-
-  // スマイリーフェイスの作成
-  const addSmileyFace = (position) => {
-    const faceGeometry = new THREE.CircleGeometry(0.5, 32);
-    const faceMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // 黄色
-    const faceMesh = new THREE.Mesh(faceGeometry, faceMaterial);
-    faceMesh.position.set(position.x, position.y, position.z);
-    scene.add(faceMesh);
-
-    // 左目
-    const eyeGeometry = new THREE.CircleGeometry(0.1, 16);
-    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 }); // 黒
-    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.2, 0.2, 0.01);
-    faceMesh.add(leftEye);
-
-    // 右目
-    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.2, 0.2, 0.01);
-    faceMesh.add(rightEye);
-
-    // 口
-    const mouthGeometry = new THREE.RingGeometry(
-      0.3,
-      0.35,
-      32,
-      1,
-      Math.PI,
-      Math.PI
-    );
-    const mouthMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 }); // 黒
-    const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
-    mouth.rotation.x = Math.PI;
-    mouth.position.set(0, -0.2, 0.02);
-    faceMesh.add(mouth);
-  };
-
-  // スマイリーフェイスを指定位置に追加
-  addSmileyFace({ x: -3.5, y: -3.8, z: -2.5 });
-
-  // 背景文字（左から登場する）
-  const leftTextGeometry = new TextGeometry("PANTER", {
-    font: font,
-    size: 1.2,
-    height: 0.05,
-    curveSegments: 5,
-  });
-
-  const leftTextMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  leftText = new THREE.Mesh(leftTextGeometry, leftTextMaterial);
-  leftTextGeometry.center();
-  leftText.position.set(-14, 3.5, -2.5); // 初期位置を画面の外に設定
-  scene.add(leftText);
-
-  // 背景文字（右から登場する）
-  const rightTextGeometry = new TextGeometry("VISION", {
-    font: font,
-    size: 1.2,
-    height: 0.05,
-    curveSegments: 5,
-  });
-
-  const rightTextMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  rightText = new THREE.Mesh(rightTextGeometry, rightTextMaterial);
-  rightTextGeometry.center();
-  rightText.position.set(14, 2, -2.5); // 初期位置を画面の外に設定
-  scene.add(rightText);
+const material = new THREE.MeshStandardMaterial({
+  color: 0xffff00, // スライムの色
+  roughness: 0.8,
+  metalness: 0.9,
+  transparent: true,
+  
 });
 
-// アニメーションループ
-const clock = new THREE.Clock();
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
 
+// ** 状態管理変数 **
+let moveSpeed = 0.05; // ゆっくりした移動
+let deformTime = 0; // 壁に衝突後の時間
+let isColliding = false; // 衝突状態管理
+let movingRight = false; // 右移動中フラグ
+
+// アニメーションループ
 function animate() {
   requestAnimationFrame(animate);
 
-  // ガラスの「S」のアニメーション
-  if (text) {
-    text.rotation.z += 0.01;
-    text.rotation.y += 0.02;
+  if (!isColliding && !movingRight) {
+    // 壁に向かって移動
+    if (mesh.position.x > wall.position.x + 1) {
+      mesh.position.x -= moveSpeed;
+    } else {
+      isColliding = true;
+    }
   }
 
-  // 背景文字のアニメーション（減速効果付きスライドイン）
-  if (leftText && rightText) {
-    const leftTarget = 0; // 左文字の目標位置
-    const rightTarget = -2; // 右文字の目標位置
-
-    // 減速計算（徐々に目標位置に近づく）
-    leftText.position.x += (leftTarget - leftText.position.x) * 0.1;
-    rightText.position.x += (rightTarget - rightText.position.x) * 0.1;
+  if (isColliding) {
+    deformTime += 0.02; // 衝突時間をカウント
   }
-  // Controls の更新
+
+  // ** スライムらしい柔らかい潰れ（X, Y, Z すべてに影響）**
+  let collisionFactor = Math.max(0.75, 1.0 - Math.sin(deformTime * 2) * 0.25);
+
+  for (let i = 0; i < positionAttribute.count; i++) {
+    const x = originalPositions[i * 3];
+    const y = originalPositions[i * 3 + 1];
+    const z = originalPositions[i * 3 + 2];
+
+    // ** X軸の位置によってY方向の潰れを変化させる **
+    let deformFactorY = (1.0 - collisionFactor) * Math.sin(Math.abs(x) * Math.PI * 2) * 1.2;
+
+    // ** Z軸にも変形を加える（Yの位置によって変化）**
+    let deformFactorZ = (1.0 - collisionFactor) * Math.sin(Math.abs(y) * Math.PI * 2) * 1.0;
+
+    // ** 頂点ごとに異なる揺れを加える（より細かい変形）**
+    const bounceEffect = Math.sin(deformTime * 2 + x * 1.5 + z * 1.2) * 0.08 * Math.exp(-deformTime * 0.8);
+    
+    positionAttribute.setXYZ(i, x * collisionFactor, y + deformFactorY + bounceEffect, z + deformFactorZ);
+  }
+  positionAttribute.needsUpdate = true;
+
+  // ** スライムらしいバウンド（ゆっくり減衰する）**
+  mesh.position.x += Math.sin(deformTime * 2) * 0.08 * Math.exp(-deformTime * 0.8);
+
+  // ** 右移動を開始 & 徐々に形を元に戻す **
+  if (deformTime > 6.3) {
+    movingRight = true;
+    isColliding = false;
+  }
+
+  if (movingRight) {
+    mesh.position.x += moveSpeed;
+
+    // ** 徐々に元の形に戻す（ゆっくり復元）**
+    for (let i = 0; i < positionAttribute.count; i++) {
+      const x = originalPositions[i * 3];
+      const y = originalPositions[i * 3 + 1];
+      const z = originalPositions[i * 3 + 2];
+
+      // ** ゆっくり復元（完全に戻るまでに時間をかける）**
+      let restoreFactor = Math.min(deformTime / 5, 1.0) + Math.cos(deformTime * 2 + x * 1.2 + z * 1.0) * 0.03;
+      positionAttribute.setXYZ(i, x * restoreFactor, y * restoreFactor, z * restoreFactor);
+    }
+    positionAttribute.needsUpdate = true;
+
+    // ** 初期位置に戻ったらループ再開 **
+    if (mesh.position.x > 5) {
+      movingRight = false;
+      deformTime = 0;
+    }
+  }
+
   controls.update();
-
-  // レンダリング
   renderer.render(scene, camera);
 }
 
 animate();
 
-// ウィンドウリサイズへの対応
+// ウィンドウリサイズ対応
 window.addEventListener("resize", () => {
   sizes.width = window.innerWidth;
   sizes.height = window.innerHeight;
